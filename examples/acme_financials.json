@@ -1,0 +1,15 @@
+{
+  "revenue": 1200000,
+  "cogs": 720000,
+  "operating_income": 180000,
+  "net_income": 120000,
+  "interest_expense": 30000,
+  "total_assets": 1500000,
+  "total_equity": 800000,
+  "total_debt": 500000,
+  "current_assets": 450000,
+  "current_liabilities": 250000,
+  "inventory": 150000,
+  "cash": 90000,
+  "receivables": 130000
+}
