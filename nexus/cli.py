@@ -7,7 +7,7 @@ import json
 import sys
 from typing import List, Optional
 
-from . import economics, ratios, tvm, valuation
+from . import economics, export, forecast, ratios, scenarios, tvm, valuation
 
 
 def _floats(text: str) -> List[float]:
@@ -37,6 +37,10 @@ def cmd_loan(a: argparse.Namespace) -> None:
     total_interest = sum(r.interest for r in rows)
     print(f"Payment:        {_money(rows[0].payment)} x {len(rows)}")
     print(f"Total interest: {_money(total_interest)}")
+    if a.csv:
+        with open(a.csv, "w", newline="") as fh:
+            export.write_csv(rows, fh)
+        print(f"Schedule written to {a.csv}")
     if a.schedule:
         print(f"{'#':>4} {'payment':>12} {'interest':>12} {'principal':>12} {'balance':>14}")
         for r in rows:
@@ -93,6 +97,67 @@ def cmd_inflation(a: argparse.Namespace) -> None:
         print(f"{_money(a.amount)} today = {_money(real)} in base-period prices")
 
 
+def _load_assumptions(path: str) -> forecast.Assumptions:
+    with open(path) as fh:
+        return forecast.Assumptions.from_dict(json.load(fh))
+
+
+def cmd_forecast(a: argparse.Namespace) -> None:
+    assumptions = _load_assumptions(a.file)
+    fc = forecast.project(assumptions)
+    print(f"{'year':>4} {'revenue':>14} {'ebit':>12} {'capex':>12} {'d_nwc':>10} {'fcf':>12}")
+    for y in fc.years:
+        print(f"{y.year:>4} {y.revenue:>14,.0f} {y.ebit:>12,.0f} {y.capex:>12,.0f} "
+              f"{y.change_in_nwc:>10,.0f} {y.fcf:>12,.0f}")
+    if a.csv:
+        with open(a.csv, "w", newline="") as fh:
+            export.write_csv(fc.years, fh)
+        print(f"Forecast written to {a.csv}")
+    if a.rate is not None:
+        res = valuation.dcf(fc.free_cash_flows, a.rate, a.growth, a.net_debt, a.shares)
+        print(f"\nEnterprise value: {_money(res.enterprise_value)}")
+        print(f"Equity value:     {_money(res.equity_value)}")
+        if res.per_share is not None:
+            print(f"Value per share:  {_money(res.per_share)}")
+        print(f"Terminal share of EV: {_pct(res.pv_terminal / res.enterprise_value)}")
+
+
+def cmd_sensitivity(a: argparse.Namespace) -> None:
+    assumptions = _load_assumptions(a.file)
+    flows = forecast.project(assumptions).free_cash_flows
+
+    def model(rate: float, growth: float) -> float:
+        res = valuation.dcf(flows, rate, growth, a.net_debt, a.shares)
+        return res.per_share if res.per_share is not None else res.equity_value
+
+    rates, growths = _floats(a.rates), _floats(a.growths)
+    grid = scenarios.two_way(model, {}, "rate", rates, "growth", growths)
+    label = "value/share" if a.shares else "equity value"
+    print(f"{label}: rows = discount rate, columns = terminal growth")
+    print(f"{'':>8}" + "".join(f"{g:>14.2%}" for g in growths))
+    for r, row in zip(rates, grid):
+        print(f"{r:>8.2%}" + "".join(f"{v:>14,.2f}" for v in row))
+
+
+def cmd_montecarlo(a: argparse.Namespace) -> None:
+    def model(cash_flow: float, rate: float) -> float:
+        return tvm.npv(rate, [-a.investment] + [cash_flow] * a.years)
+
+    samplers = {
+        "cash_flow": scenarios.normal(a.cash_flow, a.cash_flow_sd),
+        "rate": scenarios.uniform(a.rate_low, a.rate_high),
+    }
+    result = scenarios.monte_carlo(model, samplers, a.trials, a.seed)
+    s = result.summary()
+    print(f"Simulated NPV over {a.trials:,} trials")
+    print(f"  mean      {_money(s['mean'])}")
+    print(f"  stdev     {_money(s['stdev'])}")
+    print(f"  5th pct   {_money(s['p5'])}")
+    print(f"  median    {_money(s['p50'])}")
+    print(f"  95th pct  {_money(s['p95'])}")
+    print(f"  P(NPV<0)  {_pct(s['prob_negative'])}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="nexus", description="Business finance & economics toolkit")
     sub = p.add_subparsers(dest="command", required=True)
@@ -108,6 +173,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--years", type=int, required=True)
     s.add_argument("--per-year", type=int, default=12)
     s.add_argument("--schedule", action="store_true", help="print full schedule")
+    s.add_argument("--csv", help="write the schedule to this CSV file")
     s.set_defaults(func=cmd_loan)
 
     s = sub.add_parser("dcf", help="discounted cash flow valuation")
@@ -150,6 +216,34 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--nominal-rate", type=float)
     s.add_argument("--amount", type=float)
     s.set_defaults(func=cmd_inflation)
+
+    s = sub.add_parser("forecast", help="driver-based FCF forecast (optionally valued)")
+    s.add_argument("file", help="JSON assumptions file")
+    s.add_argument("--rate", type=float, help="discount rate; enables valuation")
+    s.add_argument("--growth", type=float, default=0.02, help="terminal growth")
+    s.add_argument("--net-debt", type=float, default=0.0)
+    s.add_argument("--shares", type=float)
+    s.add_argument("--csv", help="write the forecast to this CSV file")
+    s.set_defaults(func=cmd_forecast)
+
+    s = sub.add_parser("sensitivity", help="valuation grid: discount rate x terminal growth")
+    s.add_argument("file", help="JSON assumptions file")
+    s.add_argument("--rates", default="0.07,0.08,0.09,0.10,0.11")
+    s.add_argument("--growths", default="0.01,0.02,0.03")
+    s.add_argument("--net-debt", type=float, default=0.0)
+    s.add_argument("--shares", type=float)
+    s.set_defaults(func=cmd_sensitivity)
+
+    s = sub.add_parser("montecarlo", help="simulate project NPV under uncertainty")
+    s.add_argument("--investment", type=float, required=True, help="initial outlay")
+    s.add_argument("--cash-flow", type=float, required=True, help="mean annual cash flow")
+    s.add_argument("--cash-flow-sd", type=float, required=True)
+    s.add_argument("--years", type=int, required=True)
+    s.add_argument("--rate-low", type=float, required=True)
+    s.add_argument("--rate-high", type=float, required=True)
+    s.add_argument("--trials", type=int, default=10_000)
+    s.add_argument("--seed", type=int)
+    s.set_defaults(func=cmd_montecarlo)
     return p
 
 
