@@ -1,0 +1,9 @@
+{
+  "base_revenue": 10000000,
+  "growth": [0.12, 0.10, 0.08, 0.06, 0.05],
+  "ebit_margin": 0.18,
+  "tax_rate": 0.25,
+  "depreciation_pct": 0.03,
+  "capex_pct": 0.045,
+  "nwc_pct": 0.12
+}
