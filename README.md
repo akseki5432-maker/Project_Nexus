@@ -7,6 +7,7 @@
 - How many products do I need to sell to stop losing money?
 - What is this company worth, and how sure can we be?
 - How much does inflation shrink my savings?
+- How much tax do I owe, and will I get a refund?
 
 It's written so that anyone with high school math can use it and understand
 the answers. Every result ends with a plain-English **Takeaway**, and
@@ -19,9 +20,11 @@ everyday examples and practice questions.
 
 ### 1. In your browser (easiest)
 
-Open `web/index.html` in any web browser. **Nexus Studio** has sliders for
-four models: what a company is worth, the risk of a project, the cost of a
-loan, and break-even. The answers update as you move the sliders. Each view
+Open `web/index.html` in any web browser. **Nexus Studio** opens on a tax
+calculator: enter your income and what's been withheld from your pay, and it
+shows your US federal tax, your tax bracket, and whether you'll owe money or
+get a refund, step by step. It also has sliders for four more models: what a
+company is worth, the risk of a project, the cost of a loan, and break-even. The answers update as you move the sliders. Each view
 has a plain-English summary and a "Words to know" box.
 
 ### 2. From the command line
@@ -36,6 +39,7 @@ Then ask questions:
 
 | Question | Command |
 | --- | --- |
+| How much tax do I owe? | `nexus tax --wages 75000 --withholding 7000` |
 | What does a word mean? | `nexus explain npv` (or `nexus explain` for the list) |
 | Is this project worth it? | `nexus npv --rate 0.08 --cash-flows=-500000,120000,150000,170000,180000,160000` |
 | What will my loan cost? | `nexus loan --principal 250000 --rate 0.065 --years 30` |
@@ -52,6 +56,9 @@ Tips:
 - Write percentages as decimals: 8% is `0.08`.
 - Money you spend is negative and money you receive is positive. When the
   first number is negative, use the `=` form: `--cash-flows=-500000,...`
+- `nexus tax` covers US federal tax for 2025 and 2026. Add `--status married-joint`,
+  `--children 2`, `--self-employment 20000`, `--long-term-gains 5000`,
+  `--itemized 30000`, `--year 2025` and so on; `nexus tax --help` lists them all.
 - Add `--csv file.csv` to `loan` or `forecast` to open the table in a spreadsheet.
 
 Example output:
@@ -85,6 +92,7 @@ print(glossary.lookup("inflation").meaning)
 | `nexus.forecast` | Turning guesses about sales and costs into a five-year cash forecast |
 | `nexus.ratios` | A company's report card: can it pay its bills, how profitable is it |
 | `nexus.economics` | Inflation, growth, supply and demand, price sensitivity, break-even, GDP |
+| `nexus.tax` | US federal income tax: brackets, deductions, child tax credit, self-employment tax, and what you owe or get back |
 | `nexus.scenarios` | What-if tables, best and worst cases, and Monte Carlo simulation |
 | `nexus.glossary` | Plain-English definitions of every term |
 | `nexus.export` | Saving results as spreadsheet (CSV) files |
@@ -99,4 +107,6 @@ The tests compare results with standard textbook answers. GitHub Actions runs
 them on Python 3.9, 3.11 and 3.13 for every change.
 
 Results are for learning and planning. They are only as good as the guesses
-you put in, and they are not financial advice.
+you put in, and they are not financial advice. The tax estimate leaves out state
+and local tax, the alternative minimum tax, and credits other than the child tax
+credit, so check it against tax software or a tax professional before you file.

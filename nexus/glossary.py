@@ -225,6 +225,38 @@ TERMS: Dict[str, Term] = {
         "means only 5% of outcomes were worse.",
         "A 90% range from -$177K to +$348K means 9 in 10 outcomes landed in between.",
     ),
+    "tax-bracket": Term(
+        "Tax bracket and marginal rate",
+        "A band of income taxed at one rate. Your marginal rate is the rate on your "
+        "next dollar. Moving into a higher bracket only raises the tax on the dollars "
+        "inside that bracket, never on all your income.",
+        "Single in 2026 with $58,900 taxable: 10% on the first $12,400, 12% on the next "
+        "$38,000 and 22% on the last $8,500.",
+    ),
+    "effective-tax-rate": Term(
+        "Effective tax rate",
+        "Your total tax divided by your total income. It's lower than your bracket "
+        "because the first dollars are taxed lightly or not at all.",
+        "$7,670 of tax on $75,000 of income is an effective rate of about 10%, even in the 22% bracket.",
+    ),
+    "deduction": Term(
+        "Tax deduction",
+        "An amount taken off your income before tax is worked out. Everyone gets the "
+        "standard deduction, or can itemize if their own deductions add up to more.",
+        "A $1,000 deduction in the 22% bracket saves you $220.",
+    ),
+    "tax-credit": Term(
+        "Tax credit",
+        "An amount taken straight off your tax bill, dollar for dollar. Worth more than "
+        "a deduction of the same size.",
+        "The $2,200 child tax credit cuts your tax by $2,200 for each child under 17.",
+    ),
+    "withholding": Term(
+        "Withholding and refunds",
+        "Tax your employer takes from each paycheck and sends to the government for you. "
+        "When you file, you get back anything paid beyond what you owe, or pay the gap.",
+        "Owe $7,670 but had $8,000 withheld: you get a $330 refund.",
+    ),
     "gdp": Term(
         "GDP and the multiplier",
         "GDP is the value of everything a country produces in a year. The multiplier "

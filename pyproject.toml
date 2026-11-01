@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-finance"
-version = "0.3.0"
-description = "Business finance and economics toolkit: time value of money, valuation, ratios and applied economics."
+version = "0.4.0"
+description = "Business finance and economics toolkit: time value of money, valuation, ratios, applied economics and US federal tax."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

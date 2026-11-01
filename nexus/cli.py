@@ -7,7 +7,7 @@ import json
 import sys
 from typing import List, Optional
 
-from . import economics, export, forecast, glossary, ratios, scenarios, tvm, valuation
+from . import economics, export, forecast, glossary, ratios, scenarios, tax, tvm, valuation
 
 
 def _floats(text: str) -> List[float]:
@@ -197,6 +197,56 @@ def cmd_montecarlo(a: argparse.Namespace) -> None:
               f"loses money; on average it adds {_money(s['mean'])}.")
 
 
+def cmd_tax(a: argparse.Namespace) -> None:
+    inp = tax.TaxInput(
+        year=a.year, status=a.status, wages=a.wages, self_employment=a.self_employment,
+        investment_income=a.investment_income, long_term_gains=a.long_term_gains,
+        other_income=a.other_income, adjustments=a.adjustments, itemized=a.itemized,
+        children=a.children, withholding=a.withholding, estimated_payments=a.estimated,
+    )
+    r = tax.estimate(inp)
+    print(f"{a.year} federal tax estimate ({tax.STATUS_NAMES[a.status]})")
+    rows = [
+        ("Total income", r.total_income),
+        ("- Adjustments", r.adjustments),
+        ("Adjusted gross income", r.agi),
+        (f"- {r.deduction_kind.capitalize()} deduction", r.deduction),
+        ("Taxable income", r.taxable_income),
+    ]
+    for label, value in rows:
+        print(f"  {label:<38}{value:>14,.2f}")
+    print("  Tax by bracket:")
+    for s in r.ordinary_brackets:
+        print(f"    {s.rate:>4.0%} on {s.amount:>12,.2f}  = {s.tax:>12,.2f}")
+    for s in r.gains_brackets:
+        print(f"    {s.rate:>4.0%} on {s.amount:>12,.2f}  = {s.tax:>12,.2f}  (long-term gains)")
+    rows = [
+        ("Income tax before credits", r.income_tax_before_credits),
+        ("- Child tax credit", r.child_credit_used),
+        ("Income tax", r.income_tax),
+        ("+ Self-employment tax", r.self_employment_tax),
+        ("+ Additional Medicare tax", r.additional_medicare_tax),
+        ("+ Net investment income tax", r.net_investment_income_tax),
+        ("Total tax", r.total_tax),
+        ("- Paid already and refundable credits", r.payments),
+    ]
+    for label, value in rows:
+        print(f"  {label:<38}{value:>14,.2f}")
+    print(f"  {'AMOUNT YOU OWE' if r.balance_due > 0 else 'REFUND':<38}{abs(r.balance_due):>14,.2f}")
+    print(f"\nEffective rate: {_pct(r.effective_rate)} of total income")
+    print(f"Marginal rate:  {r.marginal_rate:.0%} on your next dollar of ordinary income")
+    for note in r.notes:
+        print(f"Note: {note}")
+    if r.balance_due > 0:
+        verdict = f"you still owe about {_money(r.owed)} when you file."
+    elif r.balance_due < 0:
+        verdict = f"you've paid more than enough, so expect a refund of about {_money(r.refund)}."
+    else:
+        verdict = "what you paid matches what you owe."
+    _takeaway(f"your total federal tax is about {_money(r.total_tax)} "
+              f"({_pct(r.effective_rate)} of your income); {verdict}")
+
+
 def cmd_explain(a: argparse.Namespace) -> None:
     if not a.term:
         print("Terms you can look up (nexus explain <term>):")
@@ -297,6 +347,25 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--trials", type=int, default=10_000)
     s.add_argument("--seed", type=int)
     s.set_defaults(func=cmd_montecarlo)
+
+    s = sub.add_parser("tax", help="estimate US federal income tax owed or refunded")
+    s.add_argument("--year", type=int, default=2026, choices=sorted(tax.YEARS))
+    s.add_argument("--status", default="single", choices=tax.STATUSES, help="filing status")
+    s.add_argument("--wages", type=float, default=0.0, help="W-2 wages (box 1)")
+    s.add_argument("--self-employment", type=float, default=0.0, help="net self-employment profit")
+    s.add_argument("--investment-income", type=float, default=0.0,
+                   help="interest, ordinary dividends, short-term gains")
+    s.add_argument("--long-term-gains", type=float, default=0.0,
+                   help="long-term capital gains plus qualified dividends")
+    s.add_argument("--other-income", type=float, default=0.0, help="other taxable income")
+    s.add_argument("--adjustments", type=float, default=0.0,
+                   help="above-the-line deductions, e.g. IRA, HSA, student loan interest")
+    s.add_argument("--itemized", type=float, default=0.0,
+                   help="itemized deductions (used if more than the standard deduction)")
+    s.add_argument("--children", type=int, default=0, help="children under 17")
+    s.add_argument("--withholding", type=float, default=0.0, help="federal tax withheld (W-2 box 2)")
+    s.add_argument("--estimated", type=float, default=0.0, help="estimated tax payments made")
+    s.set_defaults(func=cmd_tax)
 
     s = sub.add_parser("explain", help="plain-English meaning of a finance or economics term")
     s.add_argument("term", nargs="*", help="e.g. npv, inflation, break-even (omit to list all)")

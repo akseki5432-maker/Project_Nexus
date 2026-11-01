@@ -174,6 +174,19 @@ details.words dl { margin: 12px 0 0; display: grid; grid-template-columns: minma
 details.words dt { font-weight: 600; }
 details.words dd { margin: 0; color: var(--muted); max-width: 70ch; }
 @media (max-width: 620px) { details.words dl { grid-template-columns: minmax(0, 1fr); gap: 2px; } details.words dd { margin-bottom: 8px; } }
+.field input[type="number"], .field select { grid-column: 1 / -1; }
+select {
+  width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--paper); color: var(--ink); font: 400 var(--step--1) var(--font-body);
+}
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.taxbar { display: flex; height: 34px; border-radius: 6px; overflow: hidden; background: var(--paper); }
+.taxbar i { display: block; height: 100%; min-width: 2px; border-right: 1px solid var(--sheet); }
+#tax-table td:first-child { font-family: var(--font-body); }
+#tax-table tr.sub td { color: var(--muted); }
+#tax-table tr.big td { font-size: var(--step-0); }
+#tax-table tr.owe td { color: var(--loss); }
+.notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: var(--step--1); display: grid; gap: 4px; }
 footer { margin-top: 28px; color: var(--muted); font-size: var(--step--1); }
 footer code { font-family: var(--font-mono); }
 @media (prefers-reduced-motion: no-preference) { .chart rect, .chart path { transition: opacity .2s; } }
@@ -184,6 +197,7 @@ footer code { font-family: var(--font-mono); }
   <div class="bar">
     <div class="brand">Nexus <span>Studio</span></div>
     <nav aria-label="Models">
+      <a href="#taxes" data-view="taxes">Taxes</a>
       <a href="#valuation" data-view="valuation">Company value</a>
       <a href="#risk" data-view="risk">Project risk</a>
       <a href="#loan" data-view="loan">Loan</a>
@@ -193,6 +207,93 @@ footer code { font-family: var(--font-mono); }
 </header>
 
 <main>
+  <!-- TAXES -->
+  <section id="view-taxes" data-section="taxes" hidden>
+    <div class="intro">
+      <h1>How much tax do I owe?</h1>
+      <p>Enter your yearly income and what you've already paid. This estimates your US federal income tax and tells you whether you'll owe money or get a refund when you file. The starting numbers are an example: a single person earning $75,000.</p>
+    </div>
+    <div class="workbench">
+      <form class="rail" id="tax-form" autocomplete="off">
+        <fieldset>
+          <legend>About you</legend>
+          <div class="field"><label for="t-year">Tax year</label>
+            <select id="t-year"><option value="2026" selected>2026 (file in 2027)</option><option value="2025">2025 (filed in 2026)</option></select></div>
+          <div class="field"><label for="t-status">Filing status</label>
+            <select id="t-status">
+              <option value="single" selected>Single</option>
+              <option value="married-joint">Married filing jointly</option>
+              <option value="married-separate">Married filing separately</option>
+              <option value="head-of-household">Head of household</option>
+            </select>
+            <span class="hint">Head of household: unmarried and paying over half the cost of a home for a dependent.</span></div>
+          <div class="field"><label for="t-kids">Children under 17</label>
+            <input type="number" id="t-kids" min="0" max="20" step="1" inputmode="numeric" value="0"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Income for the year</legend>
+          <div class="field"><label for="t-wages">Wages and salary</label>
+            <input type="number" id="t-wages" min="0" step="100" inputmode="decimal" value="75000"><span class="hint">From your W-2, box 1. For a couple filing jointly, add both.</span></div>
+          <div class="field"><label for="t-se">Self-employment profit</label>
+            <input type="number" id="t-se" min="0" step="100" inputmode="decimal" value="0"><span class="hint">Side jobs, freelancing or your own business, after business expenses.</span></div>
+          <div class="field"><label for="t-inv">Interest, dividends, short-term gains</label>
+            <input type="number" id="t-inv" min="0" step="100" inputmode="decimal" value="0"><span class="hint">Investments held one year or less, and bank interest.</span></div>
+          <div class="field"><label for="t-ltcg">Long-term gains and qualified dividends</label>
+            <input type="number" id="t-ltcg" min="0" step="100" inputmode="decimal" value="0"><span class="hint">Investments held over a year. Taxed at lower rates.</span></div>
+          <div class="field"><label for="t-other">Other taxable income</label>
+            <input type="number" id="t-other" min="0" step="100" inputmode="decimal" value="0"><span class="hint">For example unemployment benefits.</span></div>
+        </fieldset>
+        <fieldset>
+          <legend>Deductions</legend>
+          <div class="field"><label for="t-adj">Adjustments</label>
+            <input type="number" id="t-adj" min="0" step="100" inputmode="decimal" value="0"><span class="hint">IRA or HSA contributions, student loan interest and similar.</span></div>
+          <div class="field"><label for="t-item">Itemized deductions</label>
+            <input type="number" id="t-item" min="0" step="100" inputmode="decimal" value="0"><span class="hint">Mortgage interest, state and local taxes, gifts to charity. Used only if bigger than the standard deduction.</span></div>
+        </fieldset>
+        <fieldset>
+          <legend>Already paid</legend>
+          <div class="field"><label for="t-wh">Federal tax withheld</label>
+            <input type="number" id="t-wh" min="0" step="100" inputmode="decimal" value="7000"><span class="hint">From your W-2, box 2, or year-to-date on your last pay stub.</span></div>
+          <div class="field"><label for="t-est">Estimated payments</label>
+            <input type="number" id="t-est" min="0" step="100" inputmode="decimal" value="0"><span class="hint">Quarterly payments you sent the IRS yourself.</span></div>
+        </fieldset>
+        <button type="button" class="ghost" id="tax-reset">Reset to example</button>
+      </form>
+      <div class="results">
+        <p class="plain" id="tax-plain" aria-live="polite"></p>
+        <div class="stats">
+          <div class="stat lead" id="t-bal-box"><span id="t-bal-label">You owe</span><b id="t-bal"></b><small id="t-bal-note"></small></div>
+          <div class="stat"><span>Total federal tax</span><b id="t-total"></b><small id="t-paid"></small></div>
+          <div class="stat"><span>Effective rate</span><b id="t-eff"></b><small>share of all your income</small></div>
+          <div class="stat"><span>Tax bracket</span><b id="t-marg"></b><small>rate on your next dollar</small></div>
+        </div>
+        <div class="panel">
+          <h2>How your income is taxed</h2>
+          <p class="note">Each slice of income is taxed at its own rate. The first slice is covered by your deduction and isn't taxed at all. Darker slices are taxed at higher rates.</p>
+          <div class="taxbar" id="tax-bar" role="img"></div>
+          <div class="legend" id="tax-legend"></div>
+        </div>
+        <div class="panel">
+          <h2>Step by step</h2>
+          <div class="scroll"><table id="tax-table"></table></div>
+          <ul class="notes" id="tax-notes"></ul>
+        </div>
+        <details class="words">
+          <summary>Words to know</summary>
+          <dl>
+            <dt>Tax bracket</dt><dd>A band of income taxed at one rate. Moving into a higher bracket only raises the tax on the dollars inside it, not on all your income.</dd>
+            <dt>Effective rate</dt><dd>Your total tax divided by your total income. It's always lower than your bracket, because the first dollars are taxed lightly or not at all.</dd>
+            <dt>Standard deduction</dt><dd>An amount of income everyone gets to earn tax-free. You can itemize instead if your itemized deductions add up to more.</dd>
+            <dt>Adjusted gross income (AGI)</dt><dd>Your total income minus adjustments like IRA contributions and half of any self-employment tax.</dd>
+            <dt>Credit</dt><dd>Money taken straight off your tax bill. A $2,200 credit cuts your tax by $2,200; a $2,200 deduction cuts it by only your bracket rate times $2,200.</dd>
+            <dt>Withholding</dt><dd>Tax your employer takes from each paycheck and sends to the IRS for you. If too much was taken, you get the extra back as a refund.</dd>
+            <dt>Self-employment tax</dt><dd>Social Security and Medicare for people who work for themselves: 15.3%, because there's no employer paying half.</dd>
+          </dl>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <!-- VALUATION -->
   <section id="view-valuation" data-section="valuation">
     <div class="intro">
@@ -417,7 +518,7 @@ footer code { font-family: var(--font-mono); }
     </div>
   </section>
 
-  <footer>New to these ideas? Read <code>LEARN.md</code> in this repository or run <code>nexus explain</code>. The math matches the <code>nexus</code> Python package. Results are only as good as the guesses you enter, and they are not financial advice.</footer>
+  <footer>The tax estimate covers US federal income tax for 2025 and 2026, using IRS figures. It leaves out state and local tax, the alternative minimum tax, and credits other than the child tax credit, so check with tax software or a tax professional before you file. New to these ideas? Read <code>LEARN.md</code> in this repository or run <code>nexus explain</code>. The math matches the <code>nexus</code> Python package. Results are only as good as the guesses you enter, and they are not financial advice.</footer>
 </main>
 
 <script>
@@ -798,12 +899,168 @@ footer code { font-family: var(--font-mono); }
     "b-price": (x) => money(x), "b-var": (x) => money(x), "b-fixed": mOut, "b-vol": (x) => whole(x),
   }, renderBreakEven);
 
+  // ================= TAXES (mirrors nexus/tax.py) =================
+  const TAX_RATES = [0.10, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37];
+  const TAX_YEARS = {
+    2025: {
+      std: { "single": 15750, "married-joint": 31500, "married-separate": 15750, "head-of-household": 23625 },
+      tops: {
+        "single": [11925, 48475, 103350, 197300, 250525, 626350],
+        "married-joint": [23850, 96950, 206700, 394600, 501050, 751600],
+        "married-separate": [11925, 48475, 103350, 197300, 250525, 375800],
+        "head-of-household": [17000, 64850, 103350, 197300, 250500, 626350],
+      },
+      gains: { "single": [48350, 533400], "married-joint": [96700, 600050], "married-separate": [48350, 300000], "head-of-household": [64750, 566700] },
+      ctc: 2200, ctcRefund: 1700, wageBase: 176100,
+    },
+    2026: {
+      std: { "single": 16100, "married-joint": 32200, "married-separate": 16100, "head-of-household": 24150 },
+      tops: {
+        "single": [12400, 50400, 105700, 201775, 256225, 640600],
+        "married-joint": [24800, 100800, 211400, 403550, 512450, 768700],
+        "married-separate": [12400, 50400, 105700, 201775, 256225, 384350],
+        "head-of-household": [17700, 67450, 105700, 201750, 256200, 640600],
+      },
+      gains: { "single": [49450, 545500], "married-joint": [98900, 613700], "married-separate": [49450, 306850], "head-of-household": [66200, 579600] },
+      ctc: 2200, ctcRefund: 1700, wageBase: 184500,
+    },
+  };
+  const CTC_PHASEOUT = { "single": 200000, "married-joint": 400000, "married-separate": 200000, "head-of-household": 200000 };
+  const SURTAX = { "single": 200000, "married-joint": 250000, "married-separate": 125000, "head-of-household": 200000 };
+  const overlap = (lo, hi, a, b) => Math.max(0, Math.min(hi, b) - Math.max(lo, a));
+
+  function estimateTax(i) {
+    const R = TAX_YEARS[i.year], st = i.status;
+    const seEarn = i.se >= 400 ? i.se * 0.9235 : 0;
+    const seTax = Math.min(seEarn, Math.max(0, R.wageBase - i.wages)) * 0.124 + seEarn * 0.029;
+    const halfSe = seTax / 2;
+    const total = i.wages + i.se + i.inv + i.ltcg + i.other;
+    const adjustments = i.adj + halfSe;
+    const agi = Math.max(0, total - adjustments);
+    const std = R.std[st], itemized = i.item > std;
+    const deduction = itemized ? i.item : std;
+    const taxable = Math.max(0, agi - deduction);
+    const gains = Math.min(i.ltcg, taxable), ordinary = taxable - gains;
+    const tops = [...R.tops[st], Infinity];
+    const ordSlices = [];
+    let lo = 0;
+    TAX_RATES.forEach((rate, k) => {
+      const amt = overlap(0, ordinary, lo, tops[k]);
+      if (amt > 0) ordSlices.push({ rate, amount: amt, tax: amt * rate });
+      lo = tops[k];
+    });
+    const [z0, z15] = R.gains[st];
+    const gainSlices = [[0, 0, z0], [0.15, z0, z15], [0.20, z15, Infinity]]
+      .map(([rate, a, b]) => { const amt = overlap(ordinary, ordinary + gains, a, b); return { rate, amount: amt, tax: amt * rate }; })
+      .filter((x) => x.amount > 0);
+    const before = [...ordSlices, ...gainSlices].reduce((s, x) => s + x.tax, 0);
+    const over = Math.max(0, agi - CTC_PHASEOUT[st]);
+    const ctc = Math.max(0, i.kids * R.ctc - 50 * Math.ceil(over / 1000));
+    const ctcUsed = Math.min(ctc, before);
+    const earned = i.wages + Math.max(0, i.se - halfSe);
+    const refundable = Math.min(ctc - ctcUsed, i.kids * R.ctcRefund, 0.15 * Math.max(0, earned - 2500));
+    const incomeTax = before - ctcUsed;
+    const addlMed = 0.009 * Math.max(0, i.wages + seEarn - SURTAX[st]);
+    const niit = 0.038 * Math.min(i.inv + i.ltcg, Math.max(0, agi - SURTAX[st]));
+    const totalTax = incomeTax + seTax + addlMed + niit;
+    const payments = i.wh + i.est + refundable;
+    let marginal = 0;
+    if (taxable > 0) marginal = TAX_RATES[tops.findIndex((t) => ordinary < t)] ?? 0.37;
+    return {
+      total, adjustments, agi, deduction, itemized, std, taxable, ordSlices, gainSlices, before, ctc, ctcUsed,
+      refundable, incomeTax, seTax, addlMed, niit, totalTax, payments, balance: totalTax - payments, marginal,
+      effective: total > 0 ? totalTax / total : 0,
+    };
+  }
+
+  const TAX_EXAMPLE = { "t-year": "2026", "t-status": "single", "t-kids": 0, "t-wages": 75000, "t-se": 0, "t-inv": 0,
+    "t-ltcg": 0, "t-other": 0, "t-adj": 0, "t-item": 0, "t-wh": 7000, "t-est": 0 };
+  const num = (id) => Math.max(0, parseFloat($(id).value) || 0);
+  const dollars = (x) => `$${Math.round(x).toLocaleString("en-US")}`;
+
+  function renderTax() {
+    const input = {
+      year: +$("t-year").value, status: $("t-status").value, kids: Math.floor(num("t-kids")),
+      wages: num("t-wages"), se: num("t-se"), inv: num("t-inv"), ltcg: num("t-ltcg"), other: num("t-other"),
+      adj: num("t-adj"), item: num("t-item"), wh: num("t-wh"), est: num("t-est"),
+    };
+    const r = estimateTax(input);
+    const owe = r.balance > 0.5, refund = r.balance < -0.5;
+    $("t-bal-label").textContent = owe ? "You owe" : refund ? "Your refund" : "Balance";
+    $("t-bal").textContent = dollars(Math.abs(r.balance));
+    $("t-bal-box").className = owe ? "stat warn" : "stat lead";
+    $("t-bal-note").textContent = owe ? "still to pay when you file" : refund ? "coming back to you" : "you're paid up";
+    $("t-total").textContent = dollars(r.totalTax);
+    $("t-paid").textContent = `${dollars(input.wh + input.est)} already paid`;
+    $("t-eff").textContent = pct(r.effective);
+    $("t-marg").textContent = r.taxable > 0 ? pct(r.marginal, 0) : "0%";
+
+    const bal = owe ? `you'll <span class="bad">owe about ${dollars(r.balance)}</span> when you file`
+      : refund ? `you've paid more than enough, so expect a <strong>refund of about ${dollars(-r.balance)}</strong>`
+      : "what you've paid matches what you owe";
+    $("tax-plain").innerHTML = r.total <= 0 ? "Enter your income on the left to see your estimate." :
+      `On <strong>${dollars(r.total)}</strong> of income, your federal tax comes to about <strong>${dollars(r.totalTax)}</strong>, ` +
+      `or <strong>${pct(r.effective)}</strong> of what you earned. ` +
+      (r.taxable > 0 ? `Your top bracket is ${pct(r.marginal, 0)}, but only the dollars inside that bracket pay that rate. ` : "Your deduction covers all your income, so you pay no income tax. ") +
+      `After what you've already paid, ${bal}.`;
+
+    // bracket bar: deduction slice, then ordinary brackets, then long-term gains
+    const segs = [{ label: `${r.itemized ? "Itemized" : "Standard"} deduction · 0%`, amount: Math.min(r.deduction, r.agi), color: "var(--rule)" }];
+    r.ordSlices.forEach((x, k) => segs.push({ label: `${pct(x.rate, 0)} bracket`, amount: x.amount,
+      color: `color-mix(in srgb, var(--accent) ${30 + k * 12}%, var(--sheet))` }));
+    r.gainSlices.forEach((x) => segs.push({ label: `Long-term gains · ${pct(x.rate, 0)}`, amount: x.amount,
+      color: `color-mix(in srgb, var(--loss) ${x.rate === 0 ? 25 : x.rate === 0.15 ? 50 : 80}%, var(--sheet))` }));
+    const sum = segs.reduce((s, x) => s + x.amount, 0) || 1;
+    $("tax-bar").innerHTML = segs.filter((x) => x.amount > 0)
+      .map((x) => `<i style="width:${(x.amount / sum) * 100}%;background:${x.color}" title="${x.label}: ${dollars(x.amount)}"></i>`).join("");
+    $("tax-bar").setAttribute("aria-label", segs.filter((x) => x.amount > 0).map((x) => `${x.label}: ${dollars(x.amount)}`).join("; "));
+    $("tax-legend").innerHTML = segs.filter((x) => x.amount > 0)
+      .map((x) => `<span><i style="background:${x.color}"></i>${x.label}: ${dollars(x.amount)}</span>`).join("");
+
+    const row = (label, v, cls = "") => `<tr class="${cls}"><td>${label}</td><td>${v}</td></tr>`;
+    let html = "<tbody>";
+    html += row("Total income", dollars(r.total));
+    if (r.adjustments > 0) html += row("− Adjustments" + (r.seTax > 0 ? " (incl. half of self-employment tax)" : ""), dollars(r.adjustments), "sub");
+    html += row("Adjusted gross income", dollars(r.agi));
+    html += row(`− ${r.itemized ? "Itemized" : "Standard"} deduction`, dollars(r.deduction), "sub");
+    html += row("Taxable income", dollars(r.taxable), "total");
+    r.ordSlices.forEach((x) => { html += row(`${pct(x.rate, 0)} on ${dollars(x.amount)}`, dollars(x.tax), "sub"); });
+    r.gainSlices.forEach((x) => { html += row(`${pct(x.rate, 0)} on ${dollars(x.amount)} of long-term gains`, dollars(x.tax), "sub"); });
+    html += row("Income tax before credits", dollars(r.before));
+    if (r.ctcUsed > 0) html += row("− Child tax credit", dollars(r.ctcUsed), "sub");
+    if (r.seTax > 0) html += row("+ Self-employment tax", dollars(r.seTax), "sub");
+    if (r.addlMed > 0) html += row("+ Additional Medicare tax (0.9%)", dollars(r.addlMed), "sub");
+    if (r.niit > 0) html += row("+ Net investment income tax (3.8%)", dollars(r.niit), "sub");
+    html += row("Total tax", dollars(r.totalTax), "total");
+    html += row("− Withheld and estimated payments", dollars(input.wh + input.est), "sub");
+    if (r.refundable > 0) html += row("− Refundable child tax credit", dollars(r.refundable), "sub");
+    html += row(owe ? "Amount you owe" : "Refund", dollars(Math.abs(r.balance)), owe ? "total big owe" : "total big");
+    $("tax-table").innerHTML = html + "</tbody>";
+
+    const notes = [];
+    if (input.item > 0 && !r.itemized) notes.push(`Your itemized deductions are less than the ${dollars(r.std)} standard deduction, so the standard deduction is used.`);
+    if (r.ctc < input.kids * TAX_YEARS[input.year].ctc) notes.push("Your income is high enough that the child tax credit is reduced.");
+    if (owe && r.balance > 1000 && input.se > 0) notes.push("Owing more than $1,000 can bring an underpayment penalty. Self-employed people usually pay estimated tax each quarter.");
+    if (input.wages > 0) notes.push(`Your employer also took about ${dollars(Math.min(input.wages, TAX_YEARS[input.year].wageBase) * 0.062 + input.wages * 0.0145)} for Social Security and Medicare. That's already settled and isn't part of this bill.`);
+    $("tax-notes").innerHTML = notes.map((n) => `<li>${n}</li>`).join("");
+  }
+
+  document.querySelectorAll("#tax-form input, #tax-form select").forEach((n) => {
+    n.addEventListener("input", renderTax);
+    n.addEventListener("change", renderTax);
+  });
+  $("tax-form").addEventListener("submit", (e) => e.preventDefault());
+  $("tax-reset").addEventListener("click", () => {
+    for (const [id, v] of Object.entries(TAX_EXAMPLE)) $(id).value = v;
+    renderTax();
+  });
+
   // ================= routing =================
-  const views = ["valuation", "risk", "loan", "breakeven"];
+  const views = ["taxes", "valuation", "risk", "loan", "breakeven"];
   const rendered = {};
-  const renderers = { valuation: renderValuation, risk: renderRisk, loan: renderLoan, breakeven: renderBreakEven };
+  const renderers = { taxes: renderTax, valuation: renderValuation, risk: renderRisk, loan: renderLoan, breakeven: renderBreakEven };
   function show() {
-    const name = views.includes(location.hash.slice(1)) ? location.hash.slice(1) : "valuation";
+    const name = views.includes(location.hash.slice(1)) ? location.hash.slice(1) : "taxes";
     views.forEach((v) => { $(`view-${v}`).hidden = v !== name; });
     document.querySelectorAll("nav a").forEach((a) => {
       if (a.dataset.view === name) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
