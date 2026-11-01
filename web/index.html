@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nexus Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ledger workbench. Sticky header with model tabs; each model is
+   an input rail on the left and results on the right, stacking on phones. */
+:root {
+  --paper: #eef1ef;
+  --sheet: #fbfcfb;
+  --ink: #15201c;
+  --muted: #5b6862;
+  --rule: #d3dbd7;
+  --accent: #0d6b57;
+  --accent-soft: #d5ebe4;
+  --loss: #b4492c;
+  --loss-soft: #f4dcd3;
+  --heat-lo: #f6ede0;
+  --heat-hi: #9fd2c3;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: 2.25rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1513; --sheet: #161e1b; --ink: #e3ebe7; --muted: #93a39c;
+    --rule: #2a3631; --accent: #4cc3a3; --accent-soft: #173a31;
+    --loss: #ec8a6c; --loss-soft: #3d2219; --heat-lo: #2a2620; --heat-hi: #1f5a4b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1513; --sheet: #161e1b; --ink: #e3ebe7; --muted: #93a39c;
+  --rule: #2a3631; --accent: #4cc3a3; --accent-soft: #173a31;
+  --loss: #ec8a6c; --loss-soft: #3d2219; --heat-lo: #2a2620; --heat-hi: #1f5a4b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 var(--step-0)/1.5 var(--font-body);
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sheet);
+}
+.num, td, .stat b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--sheet); border-bottom: 1px solid var(--rule);
+}
+.bar {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px;
+}
+.brand {
+  font: 800 var(--step-1)/1 var(--font-display); font-stretch: 80%;
+  letter-spacing: 0.02em; text-transform: uppercase;
+}
+.brand span { color: var(--accent); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a {
+  color: var(--muted); text-decoration: none; font-weight: 500;
+  padding: 6px 12px; border-radius: 6px; font-size: var(--step--1);
+}
+nav a:hover { color: var(--ink); background: var(--paper); }
+nav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+nav a:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+main {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.intro { display: grid; gap: 4px; margin-bottom: 24px; max-width: 68ch; }
+.intro h1 {
+  margin: 0; font: 700 var(--step-3)/1.05 var(--font-display); font-stretch: 85%;
+  text-wrap: balance;
+}
+.intro p { margin: 0; color: var(--muted); }
+
+.workbench { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .workbench { grid-template-columns: minmax(0, 1fr); } }
+
+.rail {
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 18px; display: grid; gap: 18px;
+}
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 12px; }
+legend {
+  font: 600 0.6875rem/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px; padding: 0;
+}
+.field { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.field label { font-size: var(--step--1); }
+.field output { font: 500 var(--step--1) var(--font-mono); color: var(--accent); }
+.field input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.growth { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.growth label { display: grid; gap: 2px; font-size: 0.6875rem; color: var(--muted); text-align: center; }
+input[type="number"] {
+  width: 100%; min-width: 0; padding: 6px 6px; border: 1px solid var(--rule); border-radius: 6px;
+  background: var(--paper); color: var(--ink); font: 400 var(--step--1) var(--font-mono);
+}
+.growth input { text-align: center; }
+
+.results { display: grid; gap: 20px; min-width: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.stat { background: var(--sheet); padding: 14px 16px; display: grid; gap: 2px; }
+.stat span { font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.stat b { font-size: var(--step-2); font-weight: 500; line-height: 1.2; }
+.stat small { color: var(--muted); font-size: var(--step--1); }
+.stat.lead b { color: var(--accent); }
+.stat.warn b { color: var(--loss); }
+
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.panel h2 { margin: 0; font: 700 var(--step-1)/1.2 var(--font-display); font-stretch: 90%; }
+.panel p.note { margin: 0; color: var(--muted); font-size: var(--step--1); max-width: 70ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th { font-weight: 500; color: var(--muted); text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+#fcf-table td:first-child { font-family: var(--font-body); }
+td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+tr.total td { font-weight: 500; border-bottom: 0; color: var(--accent); }
+.heat td { text-align: center; border: 2px solid var(--sheet); border-radius: 4px; }
+.heat td.base { outline: 2px solid var(--accent); outline-offset: -2px; font-weight: 500; }
+.heat th { text-align: center; border: 0; }
+.heat th.rowh { text-align: right; }
+.chart svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.chart text { fill: var(--muted); font: 400 11px var(--font-mono); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--step--1); color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 620px) { .two { grid-template-columns: minmax(0, 1fr); } }
+button.ghost {
+  justify-self: start; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  font: 500 var(--step--1) var(--font-body);
+}
+button.ghost:hover { background: var(--accent-soft); }
+.chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; }
+.chip.good { background: var(--accent-soft); color: var(--accent); }
+.chip.bad { background: var(--loss-soft); color: var(--loss); }
+footer { margin-top: 28px; color: var(--muted); font-size: var(--step--1); }
+footer code { font-family: var(--font-mono); }
+@media (prefers-reduced-motion: no-preference) { .chart rect, .chart path { transition: opacity .2s; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Nexus <span>Studio</span></div>
+    <nav aria-label="Models">
+      <a href="#valuation" data-view="valuation">Valuation</a>
+      <a href="#risk" data-view="risk">Project risk</a>
+      <a href="#loan" data-view="loan">Loan</a>
+      <a href="#breakeven" data-view="breakeven">Break-even</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- VALUATION -->
+  <section id="view-valuation" data-section="valuation">
+    <div class="intro">
+      <h1>What is the business worth?</h1>
+      <p>Driver-based free cash flow forecast and DCF. Example figures are the Acme sample company from <code>examples/acme_assumptions.json</code>.</p>
+    </div>
+    <div class="workbench">
+      <form class="rail" id="val-form" autocomplete="off">
+        <fieldset>
+          <legend>Operations</legend>
+          <div class="field"><label for="v-rev">Base revenue</label><output id="o-rev"></output>
+            <input type="range" id="v-rev" min="1000000" max="50000000" step="500000" value="10000000"></div>
+          <div>
+            <div class="field"><label>Revenue growth by year</label></div>
+            <div class="growth" id="v-growth"></div>
+          </div>
+          <div class="field"><label for="v-margin">EBIT margin</label><output id="o-margin"></output>
+            <input type="range" id="v-margin" min="0" max="0.5" step="0.005" value="0.18"></div>
+          <div class="field"><label for="v-tax">Tax rate</label><output id="o-tax"></output>
+            <input type="range" id="v-tax" min="0" max="0.45" step="0.005" value="0.25"></div>
+          <div class="field"><label for="v-dep">Depreciation, % of revenue</label><output id="o-dep"></output>
+            <input type="range" id="v-dep" min="0" max="0.15" step="0.0025" value="0.03"></div>
+          <div class="field"><label for="v-capex">Capex, % of revenue</label><output id="o-capex"></output>
+            <input type="range" id="v-capex" min="0" max="0.2" step="0.0025" value="0.045"></div>
+          <div class="field"><label for="v-nwc">Working capital, % of revenue</label><output id="o-nwc"></output>
+            <input type="range" id="v-nwc" min="0" max="0.4" step="0.005" value="0.12"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Valuation</legend>
+          <div class="field"><label for="v-wacc">Discount rate (WACC)</label><output id="o-wacc"></output>
+            <input type="range" id="v-wacc" min="0.04" max="0.18" step="0.0025" value="0.09"></div>
+          <div class="field"><label for="v-tg">Terminal growth</label><output id="o-tg"></output>
+            <input type="range" id="v-tg" min="0" max="0.04" step="0.0025" value="0.025"></div>
+          <div class="field"><label for="v-debt">Net debt</label><output id="o-debt"></output>
+            <input type="range" id="v-debt" min="-10000000" max="20000000" step="250000" value="4000000"></div>
+          <div class="field"><label for="v-shares">Shares outstanding</label><output id="o-shares"></output>
+            <input type="range" id="v-shares" min="100000" max="10000000" step="100000" value="1000000"></div>
+        </fieldset>
+        <button type="button" class="ghost" id="val-reset">Reset to Acme example</button>
+      </form>
+
+      <div class="results">
+        <div class="stats">
+          <div class="stat lead"><span>Value per share</span><b id="r-pershare"></b><small id="r-equity"></small></div>
+          <div class="stat"><span>Enterprise value</span><b id="r-ev"></b><small id="r-evmult"></small></div>
+          <div class="stat"><span>Terminal value share</span><b id="r-tvshare"></b><small id="r-tvnote"></small></div>
+        </div>
+        <div class="panel">
+          <h2>Free cash flow forecast</h2>
+          <div class="chart" id="fcf-chart"></div>
+          <div class="scroll"><table id="fcf-table"></table></div>
+        </div>
+        <div class="panel">
+          <h2>Sensitivity: value per share</h2>
+          <p class="note">Rows vary the discount rate, columns the terminal growth rate. The outlined cell is your current case.</p>
+          <div class="scroll"><table class="heat" id="sens-table"></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RISK -->
+  <section id="view-risk" data-section="risk" hidden>
+    <div class="intro">
+      <h1>How likely is this project to lose money?</h1>
+      <p>Monte Carlo simulation of NPV. Annual cash flow is drawn from a normal distribution and the discount rate from a uniform range, the same model as <code>nexus montecarlo</code>.</p>
+    </div>
+    <div class="workbench">
+      <form class="rail" id="risk-form" autocomplete="off">
+        <fieldset>
+          <legend>Project</legend>
+          <div class="field"><label for="m-inv">Initial investment</label><output id="o-inv"></output>
+            <input type="range" id="m-inv" min="50000" max="2000000" step="10000" value="500000"></div>
+          <div class="field"><label for="m-cf">Expected annual cash flow</label><output id="o-cf"></output>
+            <input type="range" id="m-cf" min="10000" max="600000" step="5000" value="150000"></div>
+          <div class="field"><label for="m-sd">Cash flow uncertainty (std. dev.)</label><output id="o-sd"></output>
+            <input type="range" id="m-sd" min="0" max="200000" step="2500" value="40000"></div>
+          <div class="field"><label for="m-years">Project life (years)</label><output id="o-years"></output>
+            <input type="range" id="m-years" min="1" max="20" step="1" value="5"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Discount rate range</legend>
+          <div class="field"><label for="m-rlo">Low</label><output id="o-rlo"></output>
+            <input type="range" id="m-rlo" min="0.01" max="0.2" step="0.0025" value="0.06"></div>
+          <div class="field"><label for="m-rhi">High</label><output id="o-rhi"></output>
+            <input type="range" id="m-rhi" min="0.01" max="0.25" step="0.0025" value="0.12"></div>
+        </fieldset>
+        <button type="button" class="ghost" id="risk-rerun">Run 10,000 new trials</button>
+      </form>
+      <div class="results">
+        <div class="stats">
+          <div class="stat warn"><span>Chance of a loss</span><b id="m-ploss"></b><small>share of trials with NPV below 0</small></div>
+          <div class="stat lead"><span>Mean NPV</span><b id="m-mean"></b><small id="m-sdv"></small></div>
+          <div class="stat"><span>90% range</span><b id="m-range"></b><small>5th to 95th percentile</small></div>
+        </div>
+        <div class="panel">
+          <h2>Distribution of NPV</h2>
+          <div class="legend"><span><i style="background:var(--loss)"></i>Loss</span><span><i style="background:var(--accent)"></i>Gain</span></div>
+          <div class="chart" id="hist-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOAN -->
+  <section id="view-loan" data-section="loan" hidden>
+    <div class="intro">
+      <h1>What will this loan really cost?</h1>
+      <p>Level-payment amortization, the same schedule as <code>nexus loan</code>.</p>
+    </div>
+    <div class="workbench">
+      <form class="rail" id="loan-form" autocomplete="off">
+        <fieldset>
+          <legend>Loan terms</legend>
+          <div class="field"><label for="l-p">Amount borrowed</label><output id="o-p"></output>
+            <input type="range" id="l-p" min="10000" max="2000000" step="5000" value="250000"></div>
+          <div class="field"><label for="l-r">Annual interest rate</label><output id="o-r"></output>
+            <input type="range" id="l-r" min="0" max="0.15" step="0.00125" value="0.065"></div>
+          <div class="field"><label for="l-y">Term (years)</label><output id="o-y"></output>
+            <input type="range" id="l-y" min="1" max="40" step="1" value="30"></div>
+          <div class="field"><label for="l-n">Payments per year</label><output id="o-n"></output>
+            <input type="range" id="l-n" min="1" max="52" step="1" value="12"></div>
+        </fieldset>
+      </form>
+      <div class="results">
+        <div class="stats">
+          <div class="stat lead"><span>Payment</span><b id="l-pmt"></b><small id="l-count"></small></div>
+          <div class="stat warn"><span>Total interest</span><b id="l-int"></b><small id="l-ratio"></small></div>
+          <div class="stat"><span>Halfway point</span><b id="l-half"></b><small>year the balance falls below half</small></div>
+        </div>
+        <div class="panel">
+          <h2>Where each year's payments go</h2>
+          <div class="legend"><span><i style="background:var(--loss)"></i>Interest</span><span><i style="background:var(--accent)"></i>Principal</span></div>
+          <div class="chart" id="loan-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BREAK-EVEN -->
+  <section id="view-breakeven" data-section="breakeven" hidden>
+    <div class="intro">
+      <h1>How many units to break even?</h1>
+      <p>Cost-volume-profit analysis, the same model as <code>nexus breakeven</code>.</p>
+    </div>
+    <div class="workbench">
+      <form class="rail" id="be-form" autocomplete="off">
+        <fieldset>
+          <legend>Unit economics</legend>
+          <div class="field"><label for="b-price">Price per unit</label><output id="o-price"></output>
+            <input type="range" id="b-price" min="1" max="200" step="0.5" value="50"></div>
+          <div class="field"><label for="b-var">Variable cost per unit</label><output id="o-var"></output>
+            <input type="range" id="b-var" min="0" max="190" step="0.5" value="30"></div>
+          <div class="field"><label for="b-fixed">Fixed costs</label><output id="o-fixed"></output>
+            <input type="range" id="b-fixed" min="10000" max="2000000" step="10000" value="200000"></div>
+          <div class="field"><label for="b-vol">Planned volume (units)</label><output id="o-vol"></output>
+            <input type="range" id="b-vol" min="0" max="50000" step="250" value="14000"></div>
+        </fieldset>
+      </form>
+      <div class="results">
+        <div class="stats">
+          <div class="stat lead"><span>Break-even units</span><b id="b-units"></b><small id="b-rev"></small></div>
+          <div class="stat"><span>Profit at plan</span><b id="b-profit"></b><small id="b-safety"></small></div>
+          <div class="stat"><span>Operating leverage</span><b id="b-dol"></b><small>% change in profit per 1% change in sales</small></div>
+        </div>
+        <div class="panel">
+          <h2>Revenue against total cost</h2>
+          <div class="legend"><span><i style="background:var(--accent)"></i>Revenue</span><span><i style="background:var(--loss)"></i>Total cost</span><span><i style="background:var(--muted)"></i>Fixed cost</span></div>
+          <div class="chart" id="be-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Formulas match the <code>nexus</code> Python package in this repository. Figures are illustrative and not investment advice.</footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+
+  // ---------- formatting ----------
+  const pct = (x, d = 1) => `${(x * 100).toFixed(d)}%`;
+  function money(x, digits = 2) {
+    const a = Math.abs(x), s = x < 0 ? "-" : "";
+    if (a === 0) return "$0";
+    if (a >= 1e9) return `${s}$${(a / 1e9).toFixed(digits)}B`;
+    if (a >= 1e6) return `${s}$${(a / 1e6).toFixed(digits)}M`;
+    if (a >= 1e4) return `${s}$${(a / 1e3).toFixed(digits === 2 ? 1 : digits)}K`;
+    return `${s}$${a.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  const whole = (x) => Math.round(x).toLocaleString("en-US");
+  const val = (id) => parseFloat($(id).value);
+
+  // ---------- finance (mirrors nexus/*.py) ----------
+  const npv = (rate, flows) => flows.reduce((s, cf, t) => s + cf / (1 + rate) ** t, 0);
+  function payment(principal, rate, n) {
+    return rate === 0 ? principal / n : principal * rate / (1 - (1 + rate) ** -n);
+  }
+  function project(a) {
+    let revenue = a.base, nwc = revenue * a.nwc;
+    return a.growth.map((g, i) => {
+      revenue *= 1 + g;
+      const ebit = revenue * a.margin, dep = revenue * a.dep, capex = revenue * a.capex;
+      const newNwc = revenue * a.nwc, dNwc = newNwc - nwc;
+      nwc = newNwc;
+      const fcf = ebit * (1 - a.tax) + dep - capex - dNwc;
+      return { year: i + 1, revenue, ebit, dep, capex, dNwc, fcf };
+    });
+  }
+  function dcf(flows, r, g, netDebt, shares) {
+    if (r <= g) return null;
+    const pvForecast = flows.reduce((s, cf, i) => s + cf / (1 + r) ** (i + 1), 0);
+    const terminal = flows[flows.length - 1] * (1 + g) / (r - g);
+    const pvTerminal = terminal / (1 + r) ** flows.length;
+    const ev = pvForecast + pvTerminal, equity = ev - netDebt;
+    return { ev, equity, pvTerminal, perShare: shares ? equity / shares : null };
+  }
+
+  // ---------- svg helpers ----------
+  function el(tag, attrs, parent) {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function svgFrame(host, w, h) {
+    host.textContent = "";
+    return el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img" }, host);
+  }
+  function niceTicks(lo, hi, count = 5) {
+    const span = hi - lo || 1;
+    const raw = span / count, mag = 10 ** Math.floor(Math.log10(raw));
+    const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => span / s <= count) || mag * 10;
+    const out = [];
+    for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-9; v += step) out.push(+v.toFixed(10));
+    // Always end on a tick at or above the data so the top gridline frames it.
+    if (out.length && out[out.length - 1] < hi) out.push(+(out[out.length - 1] + step).toFixed(10));
+    return out;
+  }
+  function yAxis(svg, ticks, y, x0, x1, fmt) {
+    ticks.forEach((t) => {
+      el("line", { x1: x0, x2: x1, y1: y(t), y2: y(t), stroke: "var(--rule)", "stroke-width": t === 0 ? 1.5 : 1 }, svg);
+      el("text", { x: x0 - 8, y: y(t) + 4, "text-anchor": "end" }, svg).textContent = fmt(t);
+    });
+  }
+
+  // ---------- field wiring ----------
+  function bind(form, outputs, render) {
+    for (const [id, fmt] of Object.entries(outputs)) {
+      const o = $(id.replace(/^[a-z]-/, (m) => "o-")), input = $(id);
+      const update = () => { if (outputs[id] && o) o.textContent = fmt(parseFloat(input.value)); };
+      input.addEventListener("input", () => { update(); render(); });
+      update();
+    }
+    form.addEventListener("submit", (e) => e.preventDefault());
+  }
+
+  // ================= VALUATION =================
+  const ACME = { "v-rev": 10000000, "v-margin": 0.18, "v-tax": 0.25, "v-dep": 0.03, "v-capex": 0.045,
+    "v-nwc": 0.12, "v-wacc": 0.09, "v-tg": 0.025, "v-debt": 4000000, "v-shares": 1000000 };
+  const ACME_GROWTH = [0.12, 0.10, 0.08, 0.06, 0.05];
+  const growthHost = $("v-growth");
+  ACME_GROWTH.forEach((g, i) => {
+    const lab = document.createElement("label");
+    lab.htmlFor = `v-g${i}`;
+    lab.textContent = `Y${i + 1} %`;
+    const inp = document.createElement("input");
+    Object.assign(inp, { type: "number", id: `v-g${i}`, step: "0.5", min: "-50", max: "100", value: (g * 100).toString() });
+    lab.appendChild(inp);
+    growthHost.appendChild(lab);
+    inp.addEventListener("input", renderValuation);
+  });
+
+  function readValuation() {
+    return {
+      base: val("v-rev"), margin: val("v-margin"), tax: val("v-tax"), dep: val("v-dep"),
+      capex: val("v-capex"), nwc: val("v-nwc"),
+      growth: ACME_GROWTH.map((_, i) => (parseFloat($(`v-g${i}`).value) || 0) / 100),
+    };
+  }
+
+  function renderValuation() {
+    const a = readValuation(), years = project(a), flows = years.map((y) => y.fcf);
+    const r = val("v-wacc"), g = val("v-tg"), debt = val("v-debt"), shares = val("v-shares");
+    const res = dcf(flows, r, g, debt, shares);
+
+    if (!res) {
+      $("r-pershare").textContent = "n/a";
+      $("r-equity").textContent = "Discount rate must exceed terminal growth";
+      $("r-ev").textContent = $("r-tvshare").textContent = "n/a";
+      $("r-evmult").textContent = $("r-tvnote").textContent = "";
+    } else {
+      $("r-pershare").textContent = `$${res.perShare.toFixed(2)}`;
+      $("r-equity").textContent = `Equity value ${money(res.equity)}`;
+      $("r-ev").textContent = money(res.ev);
+      const ebitda1 = years[0].ebit + years[0].dep;
+      $("r-evmult").textContent = ebitda1 > 0 ? `${(res.ev / ebitda1).toFixed(1)}x year-1 EBITDA` : "EBITDA is negative";
+      const share = res.pvTerminal / res.ev;
+      $("r-tvshare").textContent = pct(share);
+      $("r-tvnote").innerHTML = share > 0.75
+        ? '<span class="chip bad">Mostly beyond the forecast</span>'
+        : '<span class="chip good">Forecast carries weight</span>';
+    }
+
+    // table
+    const rows = [["Revenue", "revenue"], ["EBIT", "ebit"], ["+ Depreciation", "dep"], ["− Capex", "capex"],
+      ["− Change in working capital", "dNwc"]];
+    let html = `<thead><tr><th></th>${years.map((y) => `<th>Year ${y.year}</th>`).join("")}</tr></thead><tbody>`;
+    rows.forEach(([label, key]) => {
+      html += `<tr><td>${label}</td>${years.map((y) => `<td>${whole(y[key])}</td>`).join("")}</tr>`;
+    });
+    html += `<tr class="total"><td>Free cash flow</td>${years.map((y) => `<td>${whole(y.fcf)}</td>`).join("")}</tr></tbody>`;
+    $("fcf-table").innerHTML = html;
+
+    drawFcf(years);
+    drawSensitivity(flows, r, g, debt, shares);
+  }
+
+  function drawFcf(years) {
+    const W = 640, H = 220, L = 64, R = 12, T = 12, B = 28;
+    const svg = svgFrame($("fcf-chart"), W, H);
+    svg.setAttribute("aria-label", "Free cash flow by forecast year");
+    const vals = years.map((y) => y.fcf);
+    const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals) * 1.1 || 1;
+    const ticks = niceTicks(lo, hi, 4);
+    const ymin = Math.min(lo, ticks[0]), ymax = Math.max(hi, ticks[ticks.length - 1]);
+    const y = (v) => T + (H - T - B) * (1 - (v - ymin) / (ymax - ymin));
+    yAxis(svg, ticks, y, L, W - R, (t) => money(t, 1));
+    const slot = (W - L - R) / years.length, bw = Math.min(56, slot * 0.55);
+    years.forEach((yr, i) => {
+      const cx = L + slot * (i + 0.5), top = y(Math.max(0, yr.fcf)), bot = y(Math.min(0, yr.fcf));
+      el("rect", { x: cx - bw / 2, y: top, width: bw, height: Math.max(1, bot - top), rx: 3,
+        fill: yr.fcf < 0 ? "var(--loss)" : "var(--accent)" }, svg);
+      el("text", { x: cx, y: H - 8, "text-anchor": "middle" }, svg).textContent = `Y${yr.year}`;
+    });
+  }
+
+  function drawSensitivity(flows, r0, g0, debt, shares) {
+    const rates = [-0.02, -0.01, 0, 0.01, 0.02].map((d) => +(r0 + d).toFixed(4));
+    const growths = [-0.01, -0.005, 0, 0.005, 0.01].map((d) => +(g0 + d).toFixed(4));
+    const grid = rates.map((r) => growths.map((g) => {
+      const res = r > 0 ? dcf(flows, r, g, debt, shares) : null;
+      return res ? res.perShare : null;
+    }));
+    const finite = grid.flat().filter((v) => v !== null);
+    const lo = Math.min(...finite), hi = Math.max(...finite);
+    let html = `<thead><tr><th class="rowh">WACC \\ g</th>${growths.map((g) => `<th>${pct(g, 1)}</th>`).join("")}</tr></thead><tbody>`;
+    grid.forEach((row, i) => {
+      html += `<tr><th class="rowh">${pct(rates[i], 1)}</th>`;
+      row.forEach((v, j) => {
+        const base = i === 2 && j === 2 ? ' class="base"' : "";
+        if (v === null) { html += `<td${base}>n/a</td>`; return; }
+        const t = hi > lo ? (v - lo) / (hi - lo) : 0.5;
+        html += `<td${base} style="background:color-mix(in srgb, var(--heat-hi) ${Math.round(t * 100)}%, var(--heat-lo))">$${v.toFixed(2)}</td>`;
+      });
+      html += "</tr>";
+    });
+    $("sens-table").innerHTML = html + "</tbody>";
+  }
+
+  const pctOut = (x) => pct(x, 1), mOut = (x) => money(x, 1);
+  bind($("val-form"), {
+    "v-rev": mOut, "v-margin": pctOut, "v-tax": pctOut, "v-dep": (x) => pct(x, 2), "v-capex": (x) => pct(x, 2),
+    "v-nwc": pctOut, "v-wacc": (x) => pct(x, 2), "v-tg": (x) => pct(x, 2), "v-debt": mOut,
+    "v-shares": (x) => whole(x),
+  }, renderValuation);
+  $("val-reset").addEventListener("click", () => {
+    for (const [id, v] of Object.entries(ACME)) { $(id).value = v; $(id).dispatchEvent(new Event("input")); }
+    ACME_GROWTH.forEach((g, i) => { $(`v-g${i}`).value = (g * 100).toString(); });
+    renderValuation();
+  });
+
+  // ================= RISK =================
+  let seed = 42;
+  function rng(s) {
+    // mulberry32: small, fast, reproducible
+    return () => {
+      s |= 0; s = (s + 0x6d2b79f5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function renderRisk() {
+    const inv = val("m-inv"), cf = val("m-cf"), sd = val("m-sd"), years = val("m-years");
+    let rlo = val("m-rlo"), rhi = val("m-rhi");
+    if (rlo > rhi) [rlo, rhi] = [rhi, rlo];
+    const rand = rng(seed), N = 10000, out = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+      const u1 = Math.max(rand(), 1e-12), u2 = rand();
+      const c = cf + sd * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const r = rlo + (rhi - rlo) * rand();
+      const annuity = r === 0 ? years : (1 - (1 + r) ** -years) / r;
+      out[i] = -inv + c * annuity;
+    }
+    const sorted = Array.from(out).sort((a, b) => a - b);
+    const q = (p) => { const k = (N - 1) * p, lo = Math.floor(k), hi = Math.min(lo + 1, N - 1); return sorted[lo] + (sorted[hi] - sorted[lo]) * (k - lo); };
+    const mean = sorted.reduce((s, v) => s + v, 0) / N;
+    const sdv = Math.sqrt(sorted.reduce((s, v) => s + (v - mean) ** 2, 0) / (N - 1));
+    const ploss = sorted.filter((v) => v < 0).length / N;
+    $("m-ploss").textContent = pct(ploss);
+    $("m-mean").textContent = money(mean, 1);
+    $("m-sdv").textContent = `Standard deviation ${money(sdv, 1)}`;
+    $("m-range").textContent = `${money(q(0.05), 0)} to ${money(q(0.95), 0)}`;
+    drawHistogram(sorted, q(0.005), q(0.995));
+  }
+  function drawHistogram(sorted, lo, hi) {
+    const W = 640, H = 240, L = 44, R = 12, T = 12, B = 28, BINS = 36;
+    const svg = svgFrame($("hist-chart"), W, H);
+    svg.setAttribute("aria-label", "Histogram of simulated NPV outcomes");
+    if (hi <= lo) { hi = lo + 1; }
+    const width = (hi - lo) / BINS, counts = new Array(BINS).fill(0);
+    sorted.forEach((v) => { const b = Math.floor((v - lo) / width); if (b >= 0 && b < BINS) counts[b]++; });
+    const max = Math.max(...counts), pctMax = max / sorted.length;
+    const ticks = niceTicks(0, pctMax, 4);
+    const ytop = Math.max(pctMax, ticks[ticks.length - 1]);
+    const y = (p) => T + (H - T - B) * (1 - p / ytop);
+    yAxis(svg, ticks, y, L, W - R, (t) => pct(t, 0));
+    const x = (v) => L + (W - L - R) * (v - lo) / (hi - lo);
+    counts.forEach((c, i) => {
+      const x0 = x(lo + i * width), x1 = x(lo + (i + 1) * width), mid = lo + (i + 0.5) * width;
+      el("rect", { x: x0 + 0.5, y: y(c / sorted.length), width: Math.max(0.5, x1 - x0 - 1),
+        height: y(0) - y(c / sorted.length), fill: mid < 0 ? "var(--loss)" : "var(--accent)" }, svg);
+    });
+    niceTicks(lo, hi, 5).forEach((t) => {
+      if (t < lo || t > hi) return;
+      el("text", { x: x(t), y: H - 8, "text-anchor": "middle" }, svg).textContent = money(t, 0);
+    });
+    if (lo < 0 && hi > 0) {
+      el("line", { x1: x(0), x2: x(0), y1: T, y2: H - B, stroke: "var(--ink)", "stroke-dasharray": "3 3" }, svg);
+    }
+  }
+  bind($("risk-form"), {
+    "m-inv": mOut, "m-cf": mOut, "m-sd": mOut, "m-years": (x) => `${x}`,
+    "m-rlo": (x) => pct(x, 2), "m-rhi": (x) => pct(x, 2),
+  }, renderRisk);
+  $("risk-rerun").addEventListener("click", () => { seed = (Math.random() * 2 ** 31) | 0; renderRisk(); });
+
+  // ================= LOAN =================
+  function renderLoan() {
+    const P = val("l-p"), annual = val("l-r"), years = val("l-y"), per = val("l-n");
+    const r = annual / per, n = years * per, pmt = payment(P, r, n);
+    let bal = P, half = null;
+    const byYear = [];
+    for (let k = 1; k <= n; k++) {
+      const yi = Math.ceil(k / per) - 1;
+      byYear[yi] = byYear[yi] || { interest: 0, principal: 0 };
+      const interest = bal * r, princ = pmt - interest;
+      bal -= princ;
+      byYear[yi].interest += interest; byYear[yi].principal += princ;
+      if (half === null && bal <= P / 2) half = Math.ceil(k / per);
+    }
+    const totalInt = pmt * n - P;
+    $("l-pmt").textContent = money(pmt);
+    $("l-count").textContent = `${whole(n)} payments`;
+    $("l-int").textContent = money(totalInt, 1);
+    $("l-ratio").textContent = `${(totalInt / P * 100).toFixed(0)}% of the amount borrowed`;
+    $("l-half").textContent = half ? `Year ${half}` : "n/a";
+
+    const W = 640, H = 240, L = 56, R = 12, T = 12, B = 28;
+    const svg = svgFrame($("loan-chart"), W, H);
+    svg.setAttribute("aria-label", "Interest and principal paid each year");
+    const yearly = pmt * per;
+    const ticks = niceTicks(0, yearly, 4), ytop = Math.max(yearly, ticks[ticks.length - 1]);
+    const y = (v) => T + (H - T - B) * (1 - v / ytop);
+    yAxis(svg, ticks, y, L, W - R, (t) => money(t, 0));
+    const slot = (W - L - R) / byYear.length, bw = Math.max(1, slot * 0.72);
+    const every = Math.ceil(byYear.length / 10);
+    byYear.forEach((d, i) => {
+      const x0 = L + slot * i + (slot - bw) / 2;
+      el("rect", { x: x0, y: y(d.interest), width: bw, height: y(0) - y(d.interest), fill: "var(--loss)" }, svg);
+      el("rect", { x: x0, y: y(d.interest + d.principal), width: bw, height: y(d.interest) - y(d.interest + d.principal), fill: "var(--accent)" }, svg);
+      if ((i + 1) % every === 0 || i === 0) {
+        el("text", { x: x0 + bw / 2, y: H - 8, "text-anchor": "middle" }, svg).textContent = `${i + 1}`;
+      }
+    });
+  }
+  bind($("loan-form"), {
+    "l-p": mOut, "l-r": (x) => pct(x, 3), "l-y": (x) => `${x}`, "l-n": (x) => `${x}`,
+  }, renderLoan);
+
+  // ================= BREAK-EVEN =================
+  function renderBreakEven() {
+    const price = val("b-price"), vc = val("b-var"), fixed = val("b-fixed"), vol = val("b-vol");
+    const cm = price - vc;
+    const profit = vol * cm - fixed;
+    if (cm <= 0) {
+      $("b-units").textContent = "Never";
+      $("b-rev").textContent = "Price must exceed variable cost";
+      $("b-dol").textContent = "n/a";
+    } else {
+      const units = fixed / cm;
+      $("b-units").textContent = whole(Math.ceil(units));
+      $("b-rev").textContent = `${money(units * price, 1)} revenue · margin ${pct(cm / price)}`;
+      $("b-dol").textContent = profit !== 0 ? `${(vol * cm / profit).toFixed(2)}x` : "n/a";
+    }
+    $("b-profit").textContent = money(profit, 1);
+    $("b-profit").style.color = profit < 0 ? "var(--loss)" : "var(--accent)";
+    $("b-safety").textContent = cm > 0 && vol > 0
+      ? `Margin of safety ${pct(Math.max(-9.99, (vol - fixed / cm) / vol))}`
+      : "";
+
+    const W = 640, H = 260, L = 60, R = 16, T = 12, B = 28;
+    const svg = svgFrame($("be-chart"), W, H);
+    svg.setAttribute("aria-label", "Revenue and total cost lines by units sold");
+    const beU = cm > 0 ? fixed / cm : vol;
+    const xmax = Math.max(vol, beU) * 1.4 || 1000;
+    const ymax0 = Math.max(xmax * price, fixed + xmax * vc);
+    const ticks = niceTicks(0, ymax0, 4), ymax = Math.max(ymax0, ticks[ticks.length - 1]);
+    const x = (u) => L + (W - L - R) * u / xmax, y = (v) => T + (H - T - B) * (1 - v / ymax);
+    yAxis(svg, ticks, y, L, W - R, (t) => money(t, 0));
+    niceTicks(0, xmax, 5).forEach((t) => {
+      if (t > xmax) return;
+      el("text", { x: x(t), y: H - 8, "text-anchor": "middle" }, svg).textContent = whole(t);
+    });
+    el("line", { x1: x(0), x2: x(xmax), y1: y(fixed), y2: y(fixed), stroke: "var(--muted)", "stroke-dasharray": "4 4" }, svg);
+    el("line", { x1: x(0), x2: x(xmax), y1: y(fixed), y2: y(fixed + xmax * vc), stroke: "var(--loss)", "stroke-width": 2.5 }, svg);
+    el("line", { x1: x(0), x2: x(xmax), y1: y(0), y2: y(xmax * price), stroke: "var(--accent)", "stroke-width": 2.5 }, svg);
+    if (cm > 0) {
+      el("circle", { cx: x(beU), cy: y(beU * price), r: 5, fill: "var(--sheet)", stroke: "var(--ink)", "stroke-width": 2 }, svg);
+    }
+    el("line", { x1: x(vol), x2: x(vol), y1: T, y2: H - B, stroke: "var(--ink)", "stroke-dasharray": "2 4" }, svg);
+    const lab = el("text", { x: Math.min(x(vol) + 6, W - R - 70), y: T + 12 }, svg);
+    lab.textContent = "planned volume";
+  }
+  bind($("be-form"), {
+    "b-price": (x) => money(x), "b-var": (x) => money(x), "b-fixed": mOut, "b-vol": (x) => whole(x),
+  }, renderBreakEven);
+
+  // ================= routing =================
+  const views = ["valuation", "risk", "loan", "breakeven"];
+  const rendered = {};
+  const renderers = { valuation: renderValuation, risk: renderRisk, loan: renderLoan, breakeven: renderBreakEven };
+  function show() {
+    const name = views.includes(location.hash.slice(1)) ? location.hash.slice(1) : "valuation";
+    views.forEach((v) => { $(`view-${v}`).hidden = v !== name; });
+    document.querySelectorAll("nav a").forEach((a) => {
+      if (a.dataset.view === name) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    if (!rendered[name]) { renderers[name](); rendered[name] = true; }
+  }
+  window.addEventListener("hashchange", show);
+  show();
+})();
+</script>
+</body>
+</html>

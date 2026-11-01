@@ -99,3 +99,12 @@ pytest
 ```
 
 GitHub Actions runs the test suite on Python 3.9, 3.11 and 3.13 for every push and pull request.
+
+## Nexus Studio (browser)
+
+`web/index.html` is a self-contained interactive page for the four most-used
+models: valuation (forecast, DCF and a WACC × terminal-growth sensitivity grid),
+project risk (Monte Carlo NPV histogram), loan amortization and break-even.
+Open it directly in a browser; it needs no server or build step, and its
+formulas mirror the Python package (the Acme example gives $18.95 per share in
+both).
