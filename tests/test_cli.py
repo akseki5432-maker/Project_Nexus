@@ -43,3 +43,18 @@ def test_loan_csv(tmp_path):
     assert main(["loan", "--principal", "1000", "--rate", "0.05", "--years", "1",
                  "--csv", str(out)]) == 0
     assert len(out.read_text().splitlines()) == 13
+
+
+def test_takeaway_lines(capsys):
+    main(["npv", "--rate", "0.1", "--cash-flows=-1000,300,400,500"])
+    assert "Takeaway: the project falls short" in capsys.readouterr().out
+    main(["elasticity", "--q1", "100", "--q2", "80", "--p1", "10", "--p2", "12"])
+    assert "cuts the amount bought by about 1.2%" in capsys.readouterr().out
+
+
+def test_explain_command(capsys):
+    assert main(["explain", "inflation"]) == 0
+    assert "What it means" in capsys.readouterr().out
+    assert main(["explain"]) == 0
+    assert "break-even" in capsys.readouterr().out
+    assert main(["explain", "nonsense"]) == 1

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- Rewritten for a high school reader: plain-English README and a new `LEARN.md`
+  guide with everyday examples and practice questions.
+- `nexus explain <term>`: plain-English definitions of 39 terms (`nexus.glossary`).
+- Every command now ends with a one-line plain-English Takeaway.
+- Nexus Studio: plain labels with hints, a live summary sentence and a
+  "Words to know" box on each view.
+
 ## 0.2.0
 
 - Driver-based free cash flow forecast with one-step DCF valuation (`nexus.forecast`).

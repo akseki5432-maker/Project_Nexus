@@ -1,6 +1,6 @@
 """Nexus: a business finance and economics toolkit."""
 
-from . import economics, export, forecast, ratios, scenarios, tvm, valuation
+from . import economics, export, forecast, glossary, ratios, scenarios, tvm, valuation
 
-__all__ = ["economics", "export", "forecast", "ratios", "scenarios", "tvm", "valuation"]
-__version__ = "0.2.0"
+__all__ = ["economics", "export", "forecast", "glossary", "ratios", "scenarios", "tvm", "valuation"]
+__version__ = "0.3.0"
